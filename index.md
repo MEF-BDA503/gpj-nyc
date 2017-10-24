@@ -1,3 +1,2 @@
-## Welcome to GitHub Pages
 
-[Here](1.html) 
+[MEF ÜNİVERSİTESİNİN DURUMU](1.html) 
