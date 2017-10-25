@@ -1,2 +1,2 @@
 
-[MEF ÜNİVERSİTESİNİN DURUMU](hw3.html) 
+[A report about Mef University's place among its competitors and in the undergraduate market according to the university entrance examinations (YGS/LYS) can be reached here](hw3.html) 
