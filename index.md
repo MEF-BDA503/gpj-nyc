@@ -1,2 +1,2 @@
 
-[MEF ÜNİVERSİTESİNİN DURUMU](1.html) 
+[MEF ÜNİVERSİTESİNİN DURUMU](hw3.html) 
