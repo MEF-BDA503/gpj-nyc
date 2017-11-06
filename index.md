@@ -3,4 +3,4 @@
 
 + The proposal of our group project can be viewed [here](project_proposal.html).
 
-+ We are assigned for the review of the group 2yaka. You can access the group's proposal page by clicking [here](https://mef-bda503.github.io/gpj-2yaka/Group_Project2Yaka.html) and our review by clicking [here](henüz_hazırlanmadı).
++ We are assigned for the review of the group 2yaka. You can access the group's proposal page by clicking [here](https://mef-bda503.github.io/gpj-2yaka/Group_Project2Yaka.html) and our review by clicking [here]().
