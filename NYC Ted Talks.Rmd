@@ -1,0 +1,208 @@
+---
+title: "NYC Group TED Talks"
+output: html_document
+---
+# used kernel https://www.kaggle.com/mikaelhuss/r-clone-of-ted-data-analysis-notebook?scriptVersionId=1614520
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(anytime) # For converting UNIX timestamps
+library(lubridate)
+library(dplyr)
+library(corrplot)
+library(ggplot2)
+library(plyr)
+library(RJSONIO)
+library(tm)
+library(SnowballC)
+library(wordcloud)
+library(igraph)
+library(reshape)
+library(readr)
+```
+
+```{r}
+month_order = c('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
+day_order = c('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
+```
+
+```{r}
+df <- read_csv("C:/AT/tedtalks/ted_main.csv")
+colnames (df)
+
+# for reordering data
+df = df[, c('name', 'title', 'description', 'main_speaker', 'speaker_occupation', 'num_speaker', 'duration', 'event', 'film_date', 'published_date', 'comments', 'tags', 'languages', 'ratings', 'related_talks', 'url', 'views')]
+
+# for converting unix dates
+df$film_date = anydate(df$film_date)
+df$published_date = anydate(df$published_date)
+head(df)
+nrow(df)
+
+```
+# for displaying the top 20 viewed talks
+```{r}
+pop_talks = df[, c("title", "main_speaker", "views", "film_date")] %>% arrange(desc(views)) %>% head(20)
+pop_talks
+```
+# for visualizing the top 20 viewed talks
+```{r}
+pop_talks$abbr <- pop_talks$main_speaker %>% as.character() %>% substr(0,3)
+ggplot(pop_talks, aes(x=reorder(abbr, views), y=views, fill=abbr)) +
+  geom_bar(stat = 'identity') +
+  guides(fill=FALSE) + 
+  labs(x="abbr")
+```
+# for adding the histogram 
+```{r}
+
+plot(density(df$views))
+plot(density(df$views[df$views<0.4e7]))
+summary(df$views)
+# for summarizing the comments
+summary(df$comments)
+plot(density(df$comments))
+# since most of the talks have less tahn 300 comments we replot the chart
+plot(density(df$comments[df$comments < 300]))
+
+```
+
+# for visualizing the relation between views and comments
+```{r}
+ggplot(df, aes(x=views, y=comments)) + 
+  geom_point()
+# for the calculation of correlation btw views and comments
+cor(df[, c("views", "comments")])
+
+# let's check all the correlation btw numeric fields, which was not analyzed on the kernel we used as a basis
+for_cor = cor(df[, c("views", "comments","duration","num_speaker","languages")])
+M <- cor(for_cor)
+View(M)
+corrplot(M,method = "circle")
+corrplot(M,method = "number")
+corrplot(M,method = "shade")
+corrplot(M,method = "color")
+corrplot(M,method = "pie")
+corrplot(M,method = "square")
+summary(for_cor)
+
+# Visualizing many possible relations
+ggplot(df, aes(x=languages, y=views)) + geom_point()
+ggplot(df, aes(x=languages, y=duration)) + geom_point()
+ggplot(df, aes(x=comments, y=views)) + geom_point()
+ggplot(df, aes(x=num_speaker, y=views)) + geom_point()
+ggplot(df, aes(x=duration, y=views)) + geom_point()
+```
+
+# for displaying no of talks by years
+```{r}
+df$year <- year(df$film_date)
+year_df <- data.frame(table(df$year))
+colnames(year_df) <- c("year", "talks")
+ggplot(year_df, aes(x=year, y=talks, group=1)) + geom_line() + geom_point() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+# for listing the 15 most popular speakers
+```{r}
+speaker_df <- data.frame(table(df$main_speaker))
+colnames(speaker_df) <- c("main_speaker", "appearances")
+speaker_df <- speaker_df %>% arrange(desc(appearances))
+head(speaker_df, 15)
+```
+# to find the most popular occupations among speakers
+```{r}
+occupation_df <- data.frame(table(df$speaker_occupation))
+colnames(occupation_df) <- c("occupation", "appearances")
+occupation_df <- occupation_df %>% arrange(desc(appearances))
+head(occupation_df, 10)
+
+# to plot the occupatins on a barchart
+
+ggplot(head(occupation_df,10), aes(x=reorder(occupation, appearances), 
+                                   y=appearances, fill=occupation)) + 
+    geom_bar(stat="identity") + guides(fill=FALSE)
+```
+# to find the most popular occupations per event which was not analyzed on the kernel we used as a basis
+```{r}
+occup_dfLast <- data.frame(table(df$event, df$speaker_occupation))
+colnames(occup_dfLast) <- c("event", "speaker_occupation", "appearances")
+occup_dfLast <- occup_dfLast %>% arrange(desc(appearances))
+View(occup_dfLast)
+
+# to plot the occupatins on a barchart
+
+ggplot(head(occup_dfLast,10), aes(x=reorder(speaker_occupation, appearances), y=appearances, fill=speaker_occupation)) + geom_bar(stat="identity") + guides(fill=FALSE)
+```
+
+# Number of speakers by talks
+```{r}
+table(df$num_speaker)
+# Let's list the 3 talks which had 4 speakers
+df[df[,'num_speaker'] == 4, c('title', 'description', 'main_speaker', 'event')]
+
+```
+# No of talks by events
+```{r}
+event_df <- data.frame(table(df$event))
+colnames(event_df) <- c("event", "talks")
+event_df <- event_df %>% arrange(desc(talks))
+head(event_df, 10)
+```
+
+# Languages
+```{r}
+summary(df$languages)
+
+# Does more languages cause more views? There is a medium correlation rat e of 0,38 as we also analyzed in an earlier section in which we checked all correlation btw variables
+ggplot(df, aes(x=languages, y=views)) + geom_point()
+cor(df[, c("languages","views")])
+```
+
+# Distribution of talk durations
+```{r}
+df$duration <- df$duration/60
+summary(df$duration)
+# Since the average talks aveage less than 14 mins we would like to plot the talks shorter than 20 mins
+ggplot(df[df$duration<20,], aes(x=duration, y=views)) + geom_point()
+```
+
+```{r}
+df2 <- read.csv("C:/AT/tedtalks/transcripts.csv", stringsAsFactors = FALSE)
+head (df2)
+nrow (df2)
+
+df3 <- base::merge(df, df2, by="url")
+head(df3)
+
+wc <- function(x){
+  #x <- as.character(x)
+  words <- strsplit(x[[1]], split="\\s+")
+  return(length(words[[1]]))
+}
+
+df3$wc <- sapply(df3$transcript, wc)
+summary(df3$wc)
+
+# word cloud
+
+texts <- df3$transcript
+#texts <- iconv(texts, to = "utf-8")
+corpus <- Corpus(VectorSource(texts))
+corpus <- tm_map(corpus, PlainTextDocument)
+corpus <- tm_map(corpus, removePunctuation)
+corpus <- tm_map(corpus, removeWords, stopwords('english'))
+corpus <- tm_map(corpus, stemDocument)
+corpus <- tm_map(corpus, removeWords, c("and", "this", "there")) 
+corpus <- Corpus(VectorSource(corpus))
+dtm <- TermDocumentMatrix(corpus)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+head(d, 10)
+d <- d[-which(d$word %in% c("and","this","that")),]
+set.seed(1234)
+wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+          
+```
+  
