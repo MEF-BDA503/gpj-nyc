@@ -1,6 +1,14 @@
 
-+ A report that is prepared by our group members about Mef University's place among its competitors and in the undergraduate market according to the university entrance examinations (YGS/LYS) can be reached [here](hw3.html).
+**Group Members**
+`Ahsen Ceren Karasu`
+`Ahmet Tekince`
+`İsmetcan Hergünşen`
+`Volkan Orhan`
 
-+ The proposal of our group project can be viewed [here](NYC_Ted_Talks.html).
 
-+ We are assigned for the review of the group 2yaka. You can access the group's proposal page by clicking [here](https://mef-bda503.github.io/gpj-2yaka/Group_Project2Yaka.html) and our review by clicking [here](review.html).
+
++ A report that is prepared by our group members about _Mef University_'s place among its competitors and in the undergraduate market according to the university entrance examinations (_YGS/LYS_) can be reached [[html]](hw3.html).
+
++ The `proposal` of our group `project` can be viewed [[html]](NYC_Ted_Talks.html).
+
++ We are assigned for the review of the group _2yaka_. You can access the group's `proposal page` by clicking [[html]](https://mef-bda503.github.io/gpj-2yaka/Group_Project2Yaka.html) and our `review` by clicking [[html]](review.html).
