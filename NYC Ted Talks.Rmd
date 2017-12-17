@@ -1,0 +1,306 @@
+---
+title: "NYC Group TED Talks Review Study"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+# Used kernel : https://www.kaggle.com/mikaelhuss/r-clone-of-ted-data-analysis-notebook?scriptVersionId=1614520
+# 
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(anytime) # For converting UNIX timestamps
+library(lubridate)
+library(graphics)
+library(plotly)
+library(dplyr)
+library(corrplot)
+library(ggplot2)
+library(plyr)
+library(RJSONIO)
+library(tm)
+library(SnowballC)
+library(wordcloud)
+library(igraph)
+library(reshape)
+library(readr)
+```
+
+```{r}
+month_order = c('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
+day_order = c('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
+```
+
+```{r}
+df <- read_csv("C:/AT/tedtalks/ted_main.csv")
+colnames (df)
+
+# For reordering data
+df = df[, c('name', 'title', 'description', 'main_speaker', 'speaker_occupation', 'num_speaker', 'duration', 'event', 'film_date', 'published_date', 'comments', 'tags', 'languages', 'ratings', 'related_talks', 'url', 'views')]
+
+# For converting unix dates
+df$film_date = anydate(df$film_date)
+df$published_date = anydate(df$published_date)
+head(df)
+nrow(df)
+
+```
+# For displaying the top 20 viewed talks
+```{r}
+pop_talks = df[, c("title", "main_speaker", "views", "film_date")] %>% arrange(desc(views)) %>% head(20)
+pop_talks
+```
+# For visualizing the top 20 viewed talks
+```{r}
+pop_talks$abbr <- pop_talks$main_speaker %>% as.character() %>% substr(0,3)
+ggplot(pop_talks, aes(x=reorder(abbr, views), y=views, fill=abbr)) +
+  geom_bar(stat = 'identity') +
+  guides(fill=FALSE) + 
+  labs(x="abbr") + theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+
+```
+
+```{r}
+# For adding the histogram 
+plot(density(df$views))
+plot(density(df$views[df$views<0.4e7]))
+abline(v = mean(df$views),
+ col = "royalblue",
+ lwd = 2)
+abline(v = median(df$views),
+ col = "red",
+ lwd = 2)
+
+summary(df$views)
+# There are two talks viewed over 40 million times.
+
+# For summarizing the comments
+
+plot(density(df$comments))
+
+# Since most of the talks have less than 300 comments we now replot the chart
+plot(density(df$comments[df$comments < 300]))
+
+abline(v = mean(df$comments),
+ col = "royalblue",
+ lwd = 2)
+
+abline(v = median(df$comments),
+ col = "red",
+ lwd = 2)
+
+summary(df$comments)
+```
+
+# For visualizing the relation between views and comments
+```{r}
+ggplot(df, aes(x=views, y=comments)) + 
+  geom_point()
+# For the calculation of correlation between views and comments
+cor(df[, c("views", "comments")])
+
+# Let's check all the correlations between the numeric fields, which was not analyzed on the kernel we used as a basis
+for_cor = cor(df[, c("views", "comments","duration","num_speaker","languages")])
+M <- cor(for_cor)
+View(M)
+corrplot(M,method = "circle")
+corrplot(M,method = "number")
+corrplot(M,method = "shade")
+corrplot(M,method = "color")
+corrplot(M,method = "pie")
+corrplot(M,method = "square")
+summary(for_cor)
+
+# From the visualizations above we cans see that;
+
+# Views and comments have a mid positive relation of 66%,
+# More the views more the comments is observed.
+
+# Views and number of translations (languages) have a mid positive relation of 48%
+# More the translations more the views may be observed.
+
+# Views and number of speakers have a mid negative relation of -58%
+# More speakers lead to less viewers. 
+
+# Comments and number of speakers have a mid negative relation of -62%
+# More speakers lead to less comments as less views stated above. 
+
+# Duration and languages have a mid to high negative relation of -81%
+# Usually longer duraions lead to lower number of translations of the talks.
+
+
+# Visualizing many possible relations
+ggplot(df, aes(x=languages, y=views)) + geom_point()
+ggplot(df, aes(x=languages, y=duration)) + geom_point()
+ggplot(df, aes(x=comments, y=views)) + geom_point()
+ggplot(df, aes(x=num_speaker, y=views)) + geom_point()
+ggplot(df, aes(x=duration, y=views)) + geom_point()
+```
+
+# For displaying the number of talks by years
+```{r}
+df$year <- year(df$film_date)
+year_df <- data.frame(table(df$year))
+colnames(year_df) <- c("year", "talks")
+ggplot(year_df, aes(x=year, y=talks, group=1)) + geom_line() + geom_point() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+```{r}
+# For listing the 15 most popular speakers
+speaker_df <- data.frame(table(df$main_speaker))
+colnames(speaker_df) <- c("main_speaker", "appearances")
+speaker_df <- speaker_df %>% arrange(desc(appearances))
+head(speaker_df, 15)
+```
+# To find the most popular occupations among speakers
+```{r}
+occupation_df <- data.frame(table(df$speaker_occupation))
+colnames(occupation_df) <- c("occupation", "appearances")
+occupation_df <- occupation_df %>% arrange(desc(appearances))
+head(occupation_df, 10)
+
+# To plot the popular occupations on a barchart
+
+ggplot(head(occupation_df,10), aes(x=reorder(occupation, appearances), 
+                                   y=appearances, fill=occupation)) + 
+    geom_bar(stat="identity") + guides(fill=FALSE) + theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+```
+
+```{r}
+# To find the most popular occupations per event which was not analyzed on the kernel we used as a basis
+occup_dfLast <- data.frame(table(df$event, df$speaker_occupation))
+colnames(occup_dfLast) <- c("event", "speaker_occupation", "appearances")
+occup_dfLast <- occup_dfLast %>% arrange(desc(appearances))
+View(occup_dfLast)
+
+# To plot those occupations on a barchart
+
+ggplot(head(occup_dfLast,10), aes(x=reorder(speaker_occupation, appearances), y=appearances, fill=speaker_occupation)) + geom_bar(stat="identity") + guides(fill=FALSE) + theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+```
+
+# Number of speakers by talks
+```{r}
+table(df$num_speaker)
+# Let's list the 3 talks which had 4 speakers
+df[df[,'num_speaker'] == 4, c('title', 'description', 'main_speaker', 'event')]
+
+```
+# Number of talks by events
+```{r}
+event_df <- data.frame(table(df$event))
+colnames(event_df) <- c("event", "talks")
+event_df <- event_df %>% arrange(desc(talks))
+head(event_df, 10)
+```
+
+# Languages
+```{r}
+summary(df$languages)
+
+# Does more languages cause more views? There is a medium correlation rate of 0,38 as we also analyzed in an earlier section in which we checked all possible correlations between variables.
+ggplot(df, aes(x=languages, y=views)) + geom_point()
+cor(df[, c("languages","views")])
+```
+
+# Distribution of talk durations
+```{r}
+df$duration <- df$duration/60
+summary(df$duration)
+# Since the talks average to less than 14 mins we would like to plot the talks shorter than 20 mins
+ggplot(df[df$duration<20,], aes(x=duration, y=views)) + geom_point()
+```
+
+```{r}
+df2 <- read.csv("C:/AT/tedtalks/transcripts.csv", stringsAsFactors = FALSE)
+head (df2)
+nrow (df2)
+
+df3 <- base::merge(df, df2, by="url")
+head(df3)
+
+wc <- function(x){
+  #x <- as.character(x)
+  words <- strsplit(x[[1]], split="\\s+")
+  return(length(words[[1]]))
+}
+
+df3$wc <- sapply(df3$transcript, wc)
+summary(df3$wc)
+
+# Word Cloud
+
+texts <- df3$transcript
+#texts <- iconv(texts, to = "utf-8")
+corpus <- Corpus(VectorSource(texts))
+corpus <- tm_map(corpus, PlainTextDocument)
+corpus <- tm_map(corpus, removePunctuation)
+corpus <- tm_map(corpus, removeWords, stopwords('english'))
+corpus <- tm_map(corpus, stemDocument)
+corpus <- tm_map(corpus, removeWords, c("and", "this", "there")) 
+corpus <- Corpus(VectorSource(corpus))
+dtm <- TermDocumentMatrix(corpus)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+head(d, 10)
+d <- d[-which(d$word %in% c("and","this","that")),]
+set.seed(1234)
+
+  # For temporarily disabling warnings
+  oldw <- getOption("warn")
+  options(warn = -1)
+
+wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+  # For re-enabling warnings
+  options(warn = oldw)
+
+```
+
+```{r}
+
+# Average number of languages per event, and then per TED2xxx event.
+
+evntlang <- data.frame(df$event, df$languages)
+avg <- aggregate(.~df.event, data=evntlang, mean)
+
+avg_sub <- avg[avg$df.languages > 0, ]
+avgsub_last <- avg_sub[substr(avg_sub$df.event, 1, 4) == "TED2", ]
+head (avgsub_last)
+
+graph_sub <- ggplot(avgsub_last, aes(x=df.event, y=df.languages)) + geom_point(shape=1) + geom_smooth(method=lm)
+graph_sub <- graph_sub + stat_smooth() + theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+graph_sub
+
+plot(density(df$languages[df$languages > 0]))
+
+abline(v = mean(df$languages),
+ col = "royalblue",
+ lwd = 2)
+
+abline(v = median(df$languages),
+ col = "red",
+ lwd = 2)
+
+summary(df$languages)
+
+# Average number and histogram of languages per TED2xxx event.
+
+plot(density(avgsub_last$df.languages))
+
+abline(v = mean(avgsub_last$df.languages),
+ col = "royalblue",
+ lwd = 2)
+
+abline(v = median(avgsub_last$df.languages),
+ col = "red",
+ lwd = 2)
+
+summary(avgsub_last$df.languages)
+
+```
+
+
