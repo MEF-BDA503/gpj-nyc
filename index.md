@@ -6,7 +6,7 @@
 + `Volkan Orhan`
 
 # **Dec 13, 2017** 
-+ The **analysis** of our **group project** can be viewed [html](NYC_Ted_Talks.html) | [Rmd](NYC_Ted_Talks.Rmd) | [pdf](NYC_Ted_Talks.pdf).
++ The **analysis** of our **group project** can be viewed [html](NYC_Ted_Talks.html)|[Rmd](NYC_Ted_Talks.Rmd)|[pdf](NYC_Ted_Talks.pdf).
 
 # **Nov 7, 2017** 
 + The **proposal** of our **group project** can be viewed [html](NYC_Ted_Talks.html).
